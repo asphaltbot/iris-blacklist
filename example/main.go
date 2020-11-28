@@ -1,7 +1,7 @@
 package example
 
 import (
-	"github.com/asphaltbot/blacklist-middleware"
+	blacklist "github.com/asphaltbot/iris-blacklist"
 	"github.com/kataras/iris/v12"
 )
 
