@@ -1,4 +1,4 @@
-module github.com/asphaltbot/blacklist-middleware
+module github.com/asphaltbot/iris-blacklist
 
 go 1.14
 
