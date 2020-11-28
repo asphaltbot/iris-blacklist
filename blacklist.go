@@ -2,6 +2,7 @@ package blacklist
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -11,6 +12,7 @@ import (
 )
 
 // Options is the struct that gets passed in by the user to create the blacklist struct with
+// If BlockedResponse is null, we will download and use the created template (see examples/template.html)
 type Options struct {
 	Debug             bool
 	BlockedResponse   []byte
@@ -38,7 +40,39 @@ func New(options Options) iris.Handler {
 		b.log = log.New(os.Stdout, "[blacklist] ", log.LstdFlags)
 	}
 
+	// if the user has not specified a blocked response, then download the template and use that
+	if b.blockedResponse == nil {
+		b.log.Println("no blocked response specified, downloading template file")
+
+		fileBytes, err := b.downloadTemplateFile("https://asphaltbot.com/middleware/blacklist/template.html")
+
+		if err != nil {
+			panic("[blacklist] unable to download file: " + err.Error())
+		}
+
+		b.log.Println(fmt.Sprintf("successfully downloaded template file"))
+		b.blockedResponse = fileBytes
+	}
+
 	return b.Serve
+
+}
+
+func (b *Blacklist) downloadTemplateFile(url string) ([]byte, error) {
+	resp, err := http.Get(url)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+	responseBytes, err := ioutil.ReadAll(resp.Body)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return responseBytes, err
 
 }
 
