@@ -8,13 +8,18 @@ import (
 func main() {
 	app := iris.New()
 
+	replaceValues := make(map[string]string, 1)
+	replaceValues["message"] = "This is a test"
+
 	// we dont specify BlockedResponse since blacklist.New will automatically download the template file
 	// and use that if we dont specify one
 	// you can always specify one yourself, it's just a byte array
+	// by default, ReplaceStrings will have {{ip}} replaced with the user's IP address (if it exists in the specified template)
+	// so you don't need to add that
 	blacklistMiddleware := blacklist.New(blacklist.Options{
-		Debug:             true,
 		BlockedIPs:        []string{"127.0.0.1", "::1"},
 		BlockedUserAgents: []string{},
+		ReplaceStrings:    replaceValues,
 	})
 
 	app.Use(blacklistMiddleware)
