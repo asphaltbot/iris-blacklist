@@ -104,7 +104,6 @@ func (b *Blacklist) Serve(ctx iris.Context) {
 	b.log.Print(fmt.Sprintf("checking whether the user agent %s is blocked or not", userAgent))
 
 	b.replaceStrings["ip"] = ctx.Request().RemoteAddr
-	b.replaceStrings["service"] = "Joe Nuts"
 
 	for _, v := range b.blockedUserAgents {
 		if v == userAgent {
