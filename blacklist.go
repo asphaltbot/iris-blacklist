@@ -14,7 +14,6 @@ import (
 // If ReplaceStrings is not null, then {{key}} will be replaced by the corresponding value
 // By default, there are a few replace strings which automatically get populated, such as the user's IP address
 type Options struct {
-	Debug             bool
 	BlockedResponse   []byte
 	BlockedIPs        []string
 	BlockedUserAgents []string
