@@ -3,19 +3,17 @@ package blacklist
 import (
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"strings"
 
 	"github.com/kataras/iris/v12"
 )
 
-// Options is the struct that gets passed in by the user to create the blacklist struct with
-// If BlockedResponse is null, we will download and use the created template (see examples/template.html)
-// If ReplaceStrings is not null, then {{key}} will be replaced by the corresponding value
-// By default, there are a few replace strings which automatically get populated, such as the user's IP address
 type Options struct {
 	BlockedResponse   []byte
 	BlockedIPs        []string
+	BlockedIpRanges   []string
 	BlockedUserAgents []string
 	ReplaceStrings    map[string]string
 }
@@ -24,6 +22,7 @@ type Options struct {
 type Blacklist struct {
 	blockedIPs        []string
 	blockedUserAgents []string
+	blockedIpRanges   []string
 	blockedResponse   []byte
 	replaceStrings    map[string]string
 }
@@ -32,6 +31,7 @@ type Blacklist struct {
 func New(options Options) iris.Handler {
 	b := &Blacklist{
 		blockedIPs:        options.BlockedIPs,
+		blockedIpRanges:   options.BlockedIpRanges,
 		blockedUserAgents: options.BlockedUserAgents,
 		blockedResponse:   options.BlockedResponse,
 		replaceStrings:    options.ReplaceStrings,
@@ -41,6 +41,22 @@ func New(options Options) iris.Handler {
 	if b.replaceStrings == nil || len(b.replaceStrings) == 0 {
 		defaultReplaceStrings := make(map[string]string, 2)
 		b.replaceStrings = defaultReplaceStrings
+	}
+
+	// get the IP addresses within ranges that have been blocked
+	if b.blockedIpRanges != nil && len(b.blockedIpRanges) != 0 {
+		for _, v := range b.blockedIpRanges {
+			ipsInCidr, err := getIpsInCIDR(v)
+
+			if err != nil {
+				fmt.Println("Couldn't get IP addresses in range " + v + ", is it valid?")
+				continue
+			}
+
+			for _, v := range ipsInCidr {
+				b.blockedIPs = append(b.blockedIPs, v)
+			}
+		}
 	}
 
 	// if the user has not specified a blocked response, then download the template and use that
@@ -94,8 +110,6 @@ func (b *Blacklist) Serve(ctx iris.Context) {
 
 	for _, v := range b.blockedUserAgents {
 		if v == userAgent {
-			fmt.Println(fmt.Sprintf("the user's user agent has been blocked. showing blocked page"))
-
 			ctx.StatusCode(http.StatusForbidden)
 			ctx.HTML(string(b.returnWithValuesReplaced()))
 
@@ -108,8 +122,6 @@ func (b *Blacklist) Serve(ctx iris.Context) {
 
 	for _, v := range b.blockedIPs {
 		if strings.Contains(userIP, v) {
-			fmt.Println(fmt.Sprintf("the user's IP has been blocked. showing blocked page"))
-
 			ctx.StatusCode(http.StatusForbidden)
 			ctx.HTML(string(b.returnWithValuesReplaced()))
 
@@ -121,4 +133,28 @@ func (b *Blacklist) Serve(ctx iris.Context) {
 	// everything seems to check out.
 	ctx.Next()
 
+}
+
+func getIpsInCIDR(cidr string) ([]string, error) {
+	ip, ipnet, err := net.ParseCIDR(cidr)
+	if err != nil {
+		return nil, err
+	}
+
+	ips := make([]string, 0)
+	for ip := ip.Mask(ipnet.Mask); ipnet.Contains(ip); inc(ip) {
+		ips = append(ips, ip.String())
+	}
+
+	return ips, nil
+
+}
+
+func inc(ip net.IP) {
+	for j := len(ip) - 1; j >= 0; j-- {
+		ip[j]++
+		if ip[j] > 0 {
+			break
+		}
+	}
 }
