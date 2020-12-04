@@ -17,10 +17,11 @@ func main() {
 	// by default, ReplaceStrings will have {{ip}} replaced with the user's IP address (if it exists in the specified template)
 	// so you don't need to add that
 	blacklistMiddleware := blacklist.New(blacklist.Options{
-		BlockedIPs:        []string{"127.0.0.1", "::1"},
-		BlockedIpRanges:   []string{"127.0.0.1/24"},
-		BlockedUserAgents: []string{},
-		ReplaceStrings:    replaceValues,
+		BlockedIPs:            []string{"127.0.0.1", "::1"},
+		BlockedIpRanges:       []string{"127.0.0.1/24"},
+		BlockedUserAgents:     []string{},
+		ReplaceStrings:        replaceValues,
+		BlacklistedStatusCode: 200,
 	})
 
 	app.Use(blacklistMiddleware)

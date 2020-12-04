@@ -11,11 +11,12 @@ import (
 )
 
 type Options struct {
-	BlockedResponse   []byte
-	BlockedIPs        []string
-	BlockedIpRanges   []string
-	BlockedUserAgents []string
-	ReplaceStrings    map[string]string
+	BlockedResponse       []byte
+	BlockedIPs            []string
+	BlockedIpRanges       []string
+	BlockedUserAgents     []string
+	ReplaceStrings        map[string]string
+	BlacklistedStatusCode int
 }
 
 // Blacklist is the struct that we will use for all internal purposes
@@ -24,6 +25,7 @@ type Blacklist struct {
 	blockedUserAgents []string
 	blockedIpRanges   []string
 	blockedResponse   []byte
+	statusCode        int
 	replaceStrings    map[string]string
 }
 
@@ -31,6 +33,7 @@ type Blacklist struct {
 func New(options Options) iris.Handler {
 	b := &Blacklist{
 		blockedIPs:        options.BlockedIPs,
+		statusCode:        options.BlacklistedStatusCode,
 		blockedIpRanges:   options.BlockedIpRanges,
 		blockedUserAgents: options.BlockedUserAgents,
 		blockedResponse:   options.BlockedResponse,
@@ -110,7 +113,7 @@ func (b *Blacklist) Serve(ctx iris.Context) {
 
 	for _, v := range b.blockedUserAgents {
 		if v == userAgent {
-			ctx.StatusCode(http.StatusForbidden)
+			ctx.StatusCode(b.statusCode)
 			ctx.HTML(string(b.returnWithValuesReplaced()))
 
 			ctx.StopExecution()
@@ -122,7 +125,7 @@ func (b *Blacklist) Serve(ctx iris.Context) {
 
 	for _, v := range b.blockedIPs {
 		if strings.Contains(userIP, v) {
-			ctx.StatusCode(http.StatusForbidden)
+			ctx.StatusCode(b.statusCode)
 			ctx.HTML(string(b.returnWithValuesReplaced()))
 
 			ctx.StopExecution()
